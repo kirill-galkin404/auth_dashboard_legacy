@@ -12,8 +12,8 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// static frontend (files added in later tasks)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// static frontend (Vite + React + TypeScript build output)
+app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
 app.post('/api/login', function (req, res) {
   var username = req.body.username;
@@ -73,6 +73,13 @@ app.get('/api/dashboard', function (req, res) {
     },
     transactions: txns
   });
+});
+
+// client-side routing fallback: serve the SPA shell for any non-API GET
+// that doesn't match a built static asset (e.g. a direct visit/refresh
+// on /dashboard or /login).
+app.get(/^\/(?!api\/).*/, function (req, res) {
+  res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
 app.listen(3000, function () {
