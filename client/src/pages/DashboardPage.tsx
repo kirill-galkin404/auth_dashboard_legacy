@@ -1,17 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDashboard, postLogout } from '../api/client';
+import { ApiError, getDashboard, postLogout } from '../api/client';
 import type { DashboardData } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [error, setError] = useState('');
   const { username, clearAuth } = useAuth();
   const navigate = useNavigate();
 
   const loadDashboard = useCallback(() => {
-    getDashboard().then(setData);
-  }, []);
+    getDashboard()
+      .then((res) => {
+        setError('');
+        setData(res);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          clearAuth();
+          navigate('/login');
+          return;
+        }
+        setError('Failed to load dashboard data. Please try refreshing.');
+      });
+  }, [clearAuth, navigate]);
 
   useEffect(() => {
     loadDashboard();
@@ -33,6 +46,8 @@ export function DashboardPage() {
           <button onClick={handleLogout}>Log out</button>
         </div>
       </header>
+
+      {error && <p className="error">{error}</p>}
 
       {data && (
         <div className="kpis">

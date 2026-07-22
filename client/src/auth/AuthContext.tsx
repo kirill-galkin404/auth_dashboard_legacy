@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -25,16 +26,25 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ username: null, status: 'loading' });
+  // Set once an explicit auth transition (login/logout) has happened, so a
+  // late-resolving initial rehydration call can't stomp it (it never
+  // supersedes an explicit action, only fills in the unknown state at
+  // startup).
+  const explicitAuthRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     getMe()
       .then((res) => {
-        if (!cancelled) setState({ username: res.username, status: 'authenticated' });
+        if (!cancelled && !explicitAuthRef.current) {
+          setState({ username: res.username, status: 'authenticated' });
+        }
       })
       .catch(() => {
-        if (!cancelled) setState({ username: null, status: 'unauthenticated' });
+        if (!cancelled && !explicitAuthRef.current) {
+          setState({ username: null, status: 'unauthenticated' });
+        }
       });
 
     return () => {
@@ -43,10 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setAuthenticated = useCallback((username: string) => {
+    explicitAuthRef.current = true;
     setState({ username, status: 'authenticated' });
   }, []);
 
   const clearAuth = useCallback(() => {
+    explicitAuthRef.current = true;
     setState({ username: null, status: 'unauthenticated' });
   }, []);
 

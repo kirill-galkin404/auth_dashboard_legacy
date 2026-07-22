@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../auth/AuthContext';
 import { DashboardPage } from './DashboardPage';
@@ -73,5 +73,22 @@ describe('DashboardPage', () => {
     await user.click(screen.getByRole('button', { name: 'Log out' }));
 
     await waitFor(() => expect(apiClient.postLogout).toHaveBeenCalledTimes(1));
+  });
+
+  it('redirects to /login and clears auth when the dashboard fetch rejects with a 401', async () => {
+    vi.mocked(apiClient.getDashboard).mockRejectedValue(new apiClient.ApiError(401, 'not logged in'));
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<div>Login page</div>} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Login page')).toBeInTheDocument());
   });
 });
