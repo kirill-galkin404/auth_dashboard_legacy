@@ -1,12 +1,18 @@
 # auth_dashboard_legacy
 
-A sandbox project for a legacy refactoring experiment. The backend has been
-re-platformed from a single-file legacy Express app into a layered TypeScript
-backend (routes → controllers → services → repositories); see
-`server/CONTRACT.md` for the API contract.
+A sandbox project for a legacy refactoring experiment. Both the frontend and
+backend have been re-platformed:
+
+- The backend went from a single-file legacy Express app to a layered
+  TypeScript backend (routes → controllers → services → repositories); see
+  `server/CONTRACT.md` for the API contract.
+- The frontend went from AngularJS 1.8 (CDN, no build step) to a
+  Vite + React 18 + TypeScript SPA (`client/`), built to `client/dist` and
+  served by the backend.
 
 ## Stack
-- Frontend: AngularJS 1.8 (from CDN, no build step)
+- Frontend: Vite + React 18 + TypeScript (`client/`), built to `client/dist`
+  and served by Express
 - Backend: Node.js + Express + TypeScript (`server/`, layered: routes →
   controllers → services → repositories)
 - Database: SQLite
@@ -15,20 +21,29 @@ backend (routes → controllers → services → repositories); see
 
 ## Run
 ```
-cd server
+cd client
+npm install
+npm run build
+
+cd ../server
 npm install
 npm run build
 SESSION_SECRET=<your-secret> npm start
 ```
 Open http://localhost:3000
 
-For development: `SESSION_SECRET=<your-secret> npm run dev` (uses `tsx`).
+For development: `SESSION_SECRET=<your-secret> npm run dev` (uses `tsx`) in
+`server/`, and `npm run dev` in `client/` (proxies `/api/*` to the backend on
+port 3000) for frontend hot reload.
 
 Login: `admin` / `admin123`
 
 ## Tests
 ```
 cd server
+npm test
+
+cd ../client
 npm test
 ```
 
@@ -38,3 +53,5 @@ injection in `POST /api/login`), stored passwords in plain text, hardcoded
 the session secret, and used the default in-memory session store. The
 current backend uses parameterized queries, bcrypt password hashes, an
 env-required session secret, and a persistent (SQLite-backed) session store.
+The legacy AngularJS frontend (removed) has been replaced by a Vite + React +
+TypeScript SPA.
