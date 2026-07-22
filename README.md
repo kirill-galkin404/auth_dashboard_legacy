@@ -22,14 +22,19 @@ backend have been re-platformed:
 ## Run
 ```
 cd client
-npm install
+npm install --include=dev
 npm run build
 
 cd ../server
-npm install
+npm install --include=dev
 npm run build
 SESSION_SECRET=<your-secret> npm start
 ```
+(`--include=dev` is only needed when `NODE_ENV=production` is set in the
+shell/environment doing the install, since npm otherwise skips
+`devDependencies` — both `client` and `server` need their devDependencies,
+which include the build tooling like `typescript` and `vite`, present at
+build time.)
 Open http://localhost:3000
 
 For development: `SESSION_SECRET=<your-secret> npm run dev` (uses `tsx`) in
