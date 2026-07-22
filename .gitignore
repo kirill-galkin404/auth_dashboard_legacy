@@ -1,2 +1,4 @@
 node_modules/
 server/data.sqlite
+server/sessions.sqlite
+server/dist/
