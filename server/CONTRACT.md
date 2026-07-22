@@ -1,21 +1,19 @@
 # API Contract
 
 This document is the frontend/backend contract for the auth dashboard backend
-(`server/`). It exists so the incoming React frontend rewrite (a separate,
-not-yet-planned effort) can be built against a stable, documented surface
-without re-reading the backend source.
+(`server/`). It exists so the React frontend (`client/`) can be built against
+a stable, documented surface without re-reading the backend source.
 
 ## Static serving decision
 
-The backend keeps a catch-all `express.static(...)` mount (see `src/app.ts`),
-today pointed at `public/` (the existing AngularJS frontend). Once the React
-rewrite produces a `client/dist` build, that directory is the intended target
-for the same static mount — no separate reverse proxy / static host is
-required for local development or single-process deployments. If a future
-deployment topology instead puts a reverse proxy or CDN in front of a
-statically-hosted `client/dist`, this backend's static mount becomes
-redundant and can be removed; that is a deployment-time decision, not a
-change to the API contract below.
+The backend keeps a catch-all `express.static(...)` mount plus an SPA
+fallback route (see `src/app.ts`), pointed at `client/dist` (the built
+Vite + React frontend) — no separate reverse proxy / static host is required
+for local development or single-process deployments. If a future deployment
+topology instead puts a reverse proxy or CDN in front of a statically-hosted
+`client/dist`, this backend's static mount becomes redundant and can be
+removed; that is a deployment-time decision, not a change to the API contract
+below.
 
 ## Endpoints
 

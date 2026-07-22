@@ -17,9 +17,9 @@ export interface CreateAppOptions {
   sessionStoreDir?: string;
 }
 
-// Backend serves the frontend build directly: this catch-all keeps serving
-// public/ today, and will point at client/dist once the React rewrite lands.
-// See CONTRACT.md for the full static-serving decision.
+// Backend serves the frontend build directly: this catch-all points at the
+// Vite + React build output in client/dist. See CONTRACT.md for the full
+// static-serving decision.
 export async function createApp(options: CreateAppOptions = {}): Promise<Express> {
   const db = createConnection(options.dbPath);
   const userRepository = new UserRepository(db);
@@ -32,11 +32,22 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   app.use(express.json());
   app.use(createSessionMiddleware({ storeDir: options.sessionStoreDir }));
 
-  const staticDir = options.staticDir ?? path.join(__dirname, '..', '..', 'public');
+  app.get('/healthz', (_req, res) => {
+    res.status(200).json({ ok: true });
+  });
+
+  const staticDir = options.staticDir ?? path.join(__dirname, '..', '..', 'client', 'dist');
   app.use(express.static(staticDir));
 
   app.use('/api', createAuthRoutes(authService));
   app.use('/api', createDashboardRoutes(dashboardService));
+
+  // client-side routing fallback: serve the SPA shell for any non-API GET
+  // that doesn't match a built static asset (e.g. a direct visit/refresh
+  // on /dashboard or /login).
+  app.get(/^\/(?!api\/).*/, (_req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
 
   return app;
 }
