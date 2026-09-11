@@ -7,9 +7,21 @@ fast instead of falling back to a hardcoded default secret.
 """
 
 import os
+import sys
 from functools import wraps
 
 from flask import Flask, jsonify, request, send_from_directory, session
+
+# When this file is run directly (`python backend/app.py`), it loads as the
+# module `__main__`. routes/me.py and routes/dashboard.py import
+# `login_required` via `from app import login_required`, which would
+# otherwise force Python to load this same file a second time under the
+# name "app" -- re-executing it from the top and colliding with the
+# still-in-progress `routes.dashboard`/`routes.me` imports below. Aliasing
+# "app" to this already-executing module up front makes that import resolve
+# to the one module object that's actually running, regardless of whether
+# it's loaded as `__main__` or `app`.
+sys.modules.setdefault("app", sys.modules[__name__])
 
 import config
 from routes.auth import auth_bp
@@ -49,6 +61,18 @@ def login_required(view):
         return view(*args, **kwargs)
 
     return wrapped
+
+
+# routes/me.py and routes/dashboard.py import `login_required` from this
+# module, so they're imported here -- after login_required is defined --
+# rather than alongside the other top-level imports, to avoid a circular
+# import (this module would otherwise still be mid-initialization, with no
+# login_required attribute yet, when they try to import it).
+from routes.dashboard import dashboard_bp  # noqa: E402
+from routes.me import me_bp  # noqa: E402
+
+app.register_blueprint(me_bp)
+app.register_blueprint(dashboard_bp)
 
 
 @app.after_request
