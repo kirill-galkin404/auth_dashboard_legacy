@@ -1,0 +1,9 @@
+{
+  "name": "api-contract-tests",
+  "version": "1.0.0",
+  "description": "Contract test suite for the frozen 4-endpoint session-cookie API contract. Runs unmodified against the legacy Express server and the future Python/Flask server.",
+  "private": true,
+  "scripts": {
+    "test": "node run.js"
+  }
+}
