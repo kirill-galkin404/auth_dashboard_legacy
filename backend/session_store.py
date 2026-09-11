@@ -56,8 +56,17 @@ class FileSystemSessionStore:
         record = {"data": data, "expires_at": time.time() + ttl}
         path = self._path(session_id)
         tmp_path = path + ".tmp-%s" % uuid.uuid4().hex
-        with open(tmp_path, "w") as f:
-            json.dump(record, f)
+        # Session records contain the authenticated user's id/username, so
+        # they're created owner-only (0o600) rather than relying on the
+        # process umask, which would commonly leave them world-readable
+        # (e.g. mode 0o644) on a shared host.
+        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(record, f)
+        except Exception:
+            os.remove(tmp_path)
+            raise
         os.replace(tmp_path, path)
 
     def destroy(self, session_id):

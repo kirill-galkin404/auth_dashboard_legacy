@@ -123,3 +123,11 @@ def test_logout_clears_session(client, admin_credentials):
     logout_resp = client.post("/api/logout")
     assert logout_resp.status_code == 200
     assert logout_resp.get_json() == {"ok": True}
+
+    # Prove the session was actually invalidated server-side (not just that
+    # the endpoint returned success) by reusing the same client -- which
+    # still carries the same session cookie -- against a route that
+    # requires an active session.
+    me_resp = client.get("/api/me")
+    assert me_resp.status_code == 401
+    assert me_resp.get_json() == {"error": "not logged in"}

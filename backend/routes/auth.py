@@ -45,11 +45,17 @@ def _load_migration():
 
 _migration = _load_migration()
 
+# Created once at import time (app startup) and reused across requests,
+# rather than constructing a brand-new SQLAlchemy engine and re-running the
+# `CREATE TABLE IF NOT EXISTS users` migration DDL on every single login
+# call. `run()` is still idempotent, so this is equivalent, just no longer
+# wasteful per-request overhead.
+_engine = _migration.run(_migration.resolve_db_path(config.DB_PATH))
+
 
 def _get_engine():
-    """Returns a SQLAlchemy engine for the configured DB, ensuring the
-    `users` table exists (idempotent) before use."""
-    return _migration.run(_migration.resolve_db_path(config.DB_PATH))
+    """Returns the shared SQLAlchemy engine for the configured DB."""
+    return _engine
 
 
 @auth_bp.route("/api/login", methods=["POST"])

@@ -28,10 +28,11 @@ There are no hardcoded secrets or credentials anywhere in the backend.
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `SESSION_SECRET` | **Yes** | *(none — app refuses to start)* | Secret key used to sign the Flask session. `backend/config.py` raises `RuntimeError` at import time if this is unset, so the app fails fast instead of silently falling back to an insecure default. |
+| `SESSION_SECRET` | **Yes** | *(none — app refuses to start)* | Flask's `SECRET_KEY`, required by Flask's own internals. `backend/config.py` raises `RuntimeError` at import time if this is unset, so the app fails fast instead of silently falling back to an insecure default. It does not sign the session cookie (see "Sessions" below). |
 | `DB_PATH` | No | `backend/data.sqlite` | Path to the SQLite database file. |
 | `ALLOWED_ORIGINS` | No | *(empty — no cross-origin requests allowed)* | Comma-separated list of origins allowed to make credentialed cross-origin requests (e.g. `http://localhost:5173` for the Vite dev server). Only used when the frontend and backend are served from different origins (development mode); not needed in the production-style same-origin flow. |
 | `SESSION_FILE_DIR` | No | `backend/.flask_session` | Directory where session data is persisted as JSON files on disk (see "Sessions" below). |
+| `SESSION_COOKIE_SECURE` | No | `false` | Set to `true` once the app is served over HTTPS, to require the `Secure` attribute on the session cookie. Leave `false` for local/dev HTTP. |
 | `PORT` | No | `3000` | Port the Flask app listens on (`backend/app.py`). |
 | `SEED_ADMIN_PASSWORD` | No | *(none — a random password is generated)* | Used only by `backend/seed.py`; see "Default admin account" below. |
 
@@ -155,8 +156,13 @@ Sessions are cookie-based, matching the legacy contract (`docs/api-contract.md`)
 but backed by a real persistent store instead of an in-memory one: each
 session is written to its own JSON file under `SESSION_FILE_DIR`
 (`backend/session_store.py`), so logged-in sessions survive an app
-restart. The session cookie is named `session` and is signed using
-`SESSION_SECRET`.
+restart. The session cookie is named `connect.sid` (matching the legacy
+contract) and carries an opaque, unguessable random session id (a 128-bit
+`uuid4`) — unlike the legacy cookie, it is not HMAC-signed; the id itself
+is the lookup key into the server-side session store, so its value carries
+no meaning outside that store. `SESSION_SECRET` is used as Flask's
+`SECRET_KEY` (required for Flask's own internals) and to fail the app
+fast at startup if unset; it does not sign this cookie.
 
 ## API contract
 

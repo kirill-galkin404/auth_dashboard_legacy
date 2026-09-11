@@ -99,6 +99,14 @@ record, immediately revoking access for that session id.
   persists each session as a JSON file on disk, so sessions now survive
   process restarts. The lifecycle rule itself (guard + destroy-on-logout) is
   preserved; only its durability/backing store improved.
+- Implementation note (changed): the cookie name (`connect.sid`, per
+  `docs/api-contract.md`) is preserved, but its signing is not — the legacy
+  cookie was HMAC-signed by `express-session`; this rewrite's cookie value is
+  an opaque, unguessable random session id (`uuid4`) used only as a lookup
+  key into the server-side store, with no HMAC signature. This does not
+  weaken the access-control rule above (the session id is still checked
+  server-side, and is unguessable), but it is a documented change from the
+  legacy cookie's exact signing behavior.
 
 ## 5. Mock KPI/transaction generation
 

@@ -28,3 +28,12 @@ ALLOWED_ORIGINS = [origin.strip() for origin in _raw_origins.split(",") if origi
 SESSION_FILE_DIR = os.getenv(
     "SESSION_FILE_DIR", os.path.join(os.path.dirname(__file__), ".flask_session")
 )
+
+# Whether the session cookie requires HTTPS (the `Secure` cookie attribute).
+# Defaults to False so local/dev HTTP setups keep working; set
+# SESSION_COOKIE_SECURE=true once the app is actually served over HTTPS.
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)

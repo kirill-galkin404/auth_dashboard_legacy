@@ -11,6 +11,7 @@ import sys
 from functools import wraps
 
 from flask import Flask, jsonify, request, send_from_directory, session
+from werkzeug.utils import safe_join
 
 # When this file is run directly (`python backend/app.py`), it loads as the
 # module `__main__`. routes/me.py and routes/dashboard.py import
@@ -39,8 +40,20 @@ STATIC_DIR = FRONTEND_DIST_DIR if os.path.isdir(FRONTEND_DIST_DIR) else PUBLIC_D
 
 app = Flask(__name__, static_folder=None)
 
+# Cookie name matches the frozen contract documented in
+# docs/api-contract.md (the legacy Express server's default
+# express-session cookie name) so the session-cookie contract in C-0008
+# is preserved, not just its semantics.
 app.config["SECRET_KEY"] = config.SESSION_SECRET
-app.config["SESSION_COOKIE_NAME"] = "session"
+app.config["SESSION_COOKIE_NAME"] = "connect.sid"
+# Explicit cookie policy rather than relying on Flask's implicit defaults
+# (which are secure=False, samesite=None). SameSite=Lax gives the two
+# state-changing POST endpoints baseline CSRF protection from cross-site
+# navigations/form posts without breaking same-origin XHR/fetch. Secure
+# defaults to False for local/dev HTTP but can be turned on via env var
+# once the app is served over HTTPS.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
 app.config["SESSION_STORE"] = FileSystemSessionStore(config.SESSION_FILE_DIR)
 app.session_interface = FileSystemSessionInterface(app.config["SESSION_STORE"])
 
@@ -89,9 +102,18 @@ def apply_cors(response):
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_frontend(path):
-    """Serve the built frontend (or legacy public/) statically."""
-    full_path = os.path.join(STATIC_DIR, path) if path else ""
-    if path and os.path.isfile(full_path):
+    """Serve the built frontend (or legacy public/) statically.
+
+    `path` is attacker-controlled and Werkzeug's <path:path> converter does
+    not normalize '..' segments, so it must be resolved safely (via
+    werkzeug's safe_join) and confirmed to stay inside STATIC_DIR *before*
+    any filesystem check runs -- otherwise `os.path.isfile` on an
+    unnormalized path becomes a file-existence oracle for paths outside
+    STATIC_DIR (send_from_directory alone would reject the traversal only
+    when actually serving content, too late to prevent the existence probe).
+    """
+    safe_path = safe_join(STATIC_DIR, path) if path else None
+    if safe_path and os.path.isfile(safe_path):
         return send_from_directory(STATIC_DIR, path)
     return send_from_directory(STATIC_DIR, "index.html")
 
