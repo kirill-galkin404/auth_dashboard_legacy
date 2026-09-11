@@ -1,24 +1,55 @@
 """Auth routes: POST /api/login, POST /api/logout.
 
-Phase-1 scaffolding only. Credential verification here is a minimal
-placeholder (in-memory, bcrypt-hashed) -- it deliberately does NOT touch the
-database, so it introduces no SQL-injection surface. Step S-0006 (a later
-step, different lane) replaces this with real DB-backed, parameterized
-credential checks. This step's job is the session store + logout + auth
-guard lifecycle.
+Login is DB-backed: it validates the incoming payload before touching the
+database, then fetches the user row by username via a parameterized
+SQLAlchemy query and verifies the submitted password with
+`bcrypt.checkpw` (constant-time comparison against the stored bcrypt
+hash). This replaces the legacy Express handler's string-concatenated SQL
+(`"... WHERE username = '" + username + "' ..."`, a SQL-injection vector)
+and its plaintext-equality password check.
+
+Uses the same DB-access pattern as backend/seed.py: load
+backend/migrations/0001_create_users.py by file path (its filename starts
+with a digit, so it isn't importable as a dotted module) and reuse its
+`run()` / `get_engine()` / `resolve_db_path()` helpers for a SQLAlchemy
+engine consistent with config.DB_PATH.
 """
+
+import importlib.util
+import os
 
 import bcrypt
 from flask import Blueprint, current_app, jsonify, request, session
+from sqlalchemy import text
+
+import config
 
 auth_bp = Blueprint("auth", __name__)
 
-# Placeholder credential store for scaffolding/dev only. No plaintext
-# secrets, no SQL of any kind -- replaced entirely by S-0006's DB-backed
-# implementation.
-_PLACEHOLDER_USERS = {
-    "admin": bcrypt.hashpw(b"admin123", bcrypt.gensalt()),
-}
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.dirname(_HERE)
+
+
+def _load_migration():
+    """Loads backend/migrations/0001_create_users.py by file path.
+
+    Mirrors backend/seed.py's `_load_migration` helper so both modules
+    share the same DB engine/connection pattern.
+    """
+    path = os.path.join(_BACKEND_DIR, "migrations", "0001_create_users.py")
+    spec = importlib.util.spec_from_file_location("migration_0001_create_users", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_migration = _load_migration()
+
+
+def _get_engine():
+    """Returns a SQLAlchemy engine for the configured DB, ensuring the
+    `users` table exists (idempotent) before use."""
+    return _migration.run(_migration.resolve_db_path(config.DB_PATH))
 
 
 @auth_bp.route("/api/login", methods=["POST"])
@@ -27,16 +58,31 @@ def login():
     username = payload.get("username")
     password = payload.get("password")
 
-    if not username or not password or not isinstance(username, str) or not isinstance(password, str):
+    if (
+        not isinstance(username, str)
+        or not isinstance(password, str)
+        or not username.strip()
+        or not password
+    ):
+        return jsonify(ok=False, error="username and password are required"), 400
+
+    engine = _get_engine()
+    with engine.begin() as conn:
+        row = conn.execute(
+            text("SELECT id, username, password_hash FROM users WHERE username = :username"),
+            {"username": username},
+        ).mappings().first()
+
+    if row is None or not bcrypt.checkpw(
+        password.encode("utf-8"), row["password_hash"].encode("utf-8")
+    ):
+        # Same message whether the username doesn't exist or the password is
+        # wrong -- avoids disclosing which field was incorrect.
         return jsonify(ok=False, error="bad credentials"), 401
 
-    stored_hash = _PLACEHOLDER_USERS.get(username)
-    if stored_hash is None or not bcrypt.checkpw(password.encode("utf-8"), stored_hash):
-        return jsonify(ok=False, error="bad credentials"), 401
-
-    session["user"] = {"username": username}
+    session["user"] = {"id": row["id"], "username": row["username"]}
     session.modified = True
-    return jsonify(ok=True, username=username)
+    return jsonify(ok=True, username=row["username"])
 
 
 @auth_bp.route("/api/logout", methods=["POST"])
