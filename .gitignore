@@ -1,2 +1,8 @@
 node_modules/
 server/data.sqlite
+backend/.venv/
+backend/__pycache__/
+backend/routes/__pycache__/
+backend/.flask_session/
+backend/data.sqlite
+frontend/dist/
