@@ -1,9 +1,9 @@
-// AngularJS baseline uses '#!/' hash routes; flip to '#/' when the React app lands.
-const HASH_PREFIX = '#!/';
+// The React app uses '#/' hash routes (the AngularJS baseline used '#!/').
+const HASH_PREFIX = '#/';
 
 const ADMIN = { username: 'admin', password: 'admin123' };
 
-// routeUrl('login') -> '/#!/login'
+// routeUrl('login') -> '/#/login'
 function routeUrl(path) {
   const clean = String(path).replace(/^\/+/, '');
   return '/' + HASH_PREFIX + clean;

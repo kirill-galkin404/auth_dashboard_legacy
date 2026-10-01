@@ -1,13 +1,13 @@
 const { test, expect } = require('@playwright/test');
 const { routeRegExp, login } = require('./helpers');
 
-// These tests pin down TODAY's behaviour of the AngularJS client, including two defects.
-// They are deliberately labelled KNOWN DEFECT: the rewrite is expected to change this
-// behaviour (R-0001: a failed dashboard call must not leave a blank page; R-0004: a failed
-// logout must tell the user), at which point these tests are replaced by the new behaviour.
+// These tests used to pin two legacy AngularJS defects. The React rewrite fixes them:
+// R-0001: the app checks the current user first; a failed check sends the user to login and
+// no dashboard data is loaded. R-0004: logout only leaves the dashboard once the server call
+// succeeds, and a failed logout shows a message.
 
-test.describe('known client defects (legacy behaviour)', () => {
-  test('KNOWN DEFECT R-0001 dashboard 401 is swallowed: no redirect and an empty page', async ({ page }) => {
+test.describe('formerly known client defects (fixed in the React rewrite)', () => {
+  test('R-0001 dashboard 401 redirects to login (was KNOWN DEFECT: silent empty page)', async ({ page }) => {
     let dashboardCalls = 0;
     await page.route('**/api/dashboard', (route) => {
       dashboardCalls += 1;
@@ -18,24 +18,17 @@ test.describe('known client defects (legacy behaviour)', () => {
       });
     });
 
-    // /api/me is real and succeeds because we are genuinely logged in.
     await login(page);
-    await expect(page.locator('.dashboard')).toBeVisible();
-    await expect(page.locator('header span')).toHaveText('admin');
 
-    // Let the (mocked) failing dashboard call settle, then assert nothing happened.
-    await expect.poll(() => dashboardCalls).toBeGreaterThanOrEqual(1);
-    await page.waitForTimeout(500);
-
-    await expect(page).toHaveURL(routeRegExp('dashboard'));
+    // The failing (mocked) dashboard call sends the user back to the login route.
+    await expect(page).toHaveURL(routeRegExp('login'));
+    await expect(page.locator('.login-box')).toBeVisible();
     await expect(page.locator('.kpis')).toHaveCount(0);
     await expect(page.locator('.kpi')).toHaveCount(0);
     await expect(page.locator('.txns')).toHaveCount(0);
-    // No error message is shown either: the failure is silent.
-    await expect(page.locator('.error')).toHaveCount(0);
   });
 
-  test('KNOWN DEFECT R-0004 failed logout is silent: user stays on the dashboard', async ({ page }) => {
+  test('R-0004 failed logout shows message and stays on dashboard (was KNOWN DEFECT: silent failure)', async ({ page }) => {
     await login(page);
     await expect(page.locator('.kpi')).toHaveCount(4);
 
@@ -51,12 +44,11 @@ test.describe('known client defects (legacy behaviour)', () => {
 
     await page.getByRole('button', { name: 'Log out' }).click();
     await expect.poll(() => logoutCalls).toBe(1);
-    await page.waitForTimeout(500);
 
+    await expect(page.locator('.error')).toBeVisible();
     await expect(page).toHaveURL(routeRegExp('dashboard'));
     await expect(page.locator('.dashboard')).toBeVisible();
     await expect(page.locator('.kpi')).toHaveCount(4);
-    await expect(page.locator('.error')).toHaveCount(0);
     await expect(page.locator('.login-box')).toHaveCount(0);
   });
 });
