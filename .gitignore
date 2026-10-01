@@ -1,2 +1,6 @@
 node_modules/
 server/data.sqlite
+e2e/test-results/
+e2e/playwright-report/
+server/package-lock.json
+frontend/coverage/
