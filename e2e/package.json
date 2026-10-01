@@ -1,0 +1,12 @@
+{
+  "name": "auth-dashboard-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end tests for the auth dashboard",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}
