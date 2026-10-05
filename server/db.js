@@ -1,7 +1,7 @@
 var sqlite3 = require('sqlite3');
 var path = require('path');
 
-var db = new sqlite3.Database(path.join(__dirname, 'data.sqlite'));
+var db = new sqlite3.Database(process.env.DB_PATH || path.join(__dirname, 'data.sqlite'));
 
 db.serialize(function () {
   db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT)');
