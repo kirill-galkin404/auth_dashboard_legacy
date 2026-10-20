@@ -8,7 +8,14 @@ const router = useRouter();
 const data = ref(null);
 
 async function load() {
-  data.value = await api.dashboard();
+  try {
+    data.value = await api.dashboard();
+  } catch (e) {
+    if (e && e.status === 401) {
+      data.value = null;
+      await router.push('/login');
+    }
+  }
 }
 
 async function logout() {
