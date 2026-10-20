@@ -14,7 +14,9 @@ async function submit() {
     await api.login(username.value, password.value);
     await router.push('/dashboard');
   } catch (e) {
-    error.value = 'Invalid username or password';
+    error.value = e && e.status === 401
+      ? 'Invalid username or password'
+      : 'Server error, please try again';
   }
 }
 </script>
