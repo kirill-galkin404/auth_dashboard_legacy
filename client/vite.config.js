@@ -7,6 +7,10 @@ export default defineConfig({
     outDir: '../public',
     emptyOutDir: true
   },
+  test: {
+    environment: 'jsdom',
+    globals: true
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:3000'
