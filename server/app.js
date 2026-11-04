@@ -12,8 +12,8 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// static frontend (files added in later tasks)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// static frontend (built Vite/React app in client/dist)
+app.use(express.static(path.join(__dirname, '..', 'client', 'dist')));
 
 app.post('/api/login', function (req, res) {
   var username = req.body.username;
