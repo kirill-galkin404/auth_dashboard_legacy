@@ -4,18 +4,42 @@ A sandbox project for a legacy refactoring experiment. Written deliberately in a
 style — not a role model, but material to be rewritten.
 
 ## Stack
-- Frontend: AngularJS 1.8 (from CDN, no build step)
+- Frontend: React 18 with Vite (`client/`, react-router hash routing, Vitest for tests)
 - Backend: Node.js + Express (old style, single app.js)
 - Database: SQLite
 - Auth: cookie-based sessions
 
-## Run
+## Prerequisites
+Node.js 18 or newer and npm.
+
+## Install
 ```
-cd server
-npm install
-npm start
+cd server && npm install
+cd client && npm install
+```
+
+## Run (production)
+Run `npm run build` before `npm start`: the build runs in `client/` and the start in
+`server/`. Express serves the built frontend from `client/dist`.
+```
+cd client && npm run build
+cd ../server && npm start
 ```
 Open http://localhost:3000
+
+## Run (development)
+Start the API on port 3000, then the Vite dev server, which proxies `/api` to
+`localhost:3000`:
+```
+cd server && npm start
+cd client && npm run dev
+```
+Open the URL Vite prints (default http://localhost:5173).
+
+## Tests
+```
+cd client && npm test
+```
 
 Login: `admin` / `admin123`
 
