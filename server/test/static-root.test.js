@@ -58,13 +58,16 @@ async function waitForSeed() {
   throw new Error('seeded admin never became available');
 }
 
-test('serves the React build by default and runs the cookie login-to-logout sequence', async function () {
+var DIST_INDEX = path.join(SERVER_DIR, '..', 'frontend', 'dist', 'index.html');
+var distMissing = !fs.existsSync(DIST_INDEX) && 'frontend/dist missing; run npm --prefix frontend run build first';
+
+test('serves the React build by default and runs the cookie login-to-logout sequence', { skip: distMissing }, async function () {
   var child = await startServer({ FRONTEND_DIR: '' });
   try {
     var page = await fetch(BASE + '/');
     assert.strictEqual(page.status, 200);
     var html = await page.text();
-    var dist = fs.readFileSync(path.join(SERVER_DIR, '..', 'frontend', 'dist', 'index.html'), 'utf8');
+    var dist = fs.readFileSync(DIST_INDEX, 'utf8');
     assert.strictEqual(html, dist);
     assert.match(html, /id="root"/);
     assert.match(html, /<script[^>]+src="[^"]+\.js"/);
