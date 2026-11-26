@@ -12,8 +12,11 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// static frontend (files added in later tasks)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// static frontend: React build by default; FRONTEND_DIR overrides it
+// (an absolute path is expected; a relative one resolves against the working directory)
+app.use(express.static(process.env.FRONTEND_DIR
+  ? path.resolve(process.env.FRONTEND_DIR)
+  : path.join(__dirname, '..', 'frontend', 'dist')));
 
 app.post('/api/login', function (req, res) {
   var username = req.body.username;
